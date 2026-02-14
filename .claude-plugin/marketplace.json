@@ -1,0 +1,19 @@
+{
+    "name": "shuntacurosu-plugins",
+    "owner": {
+        "name": "shuntacurosu"
+    },
+    "description": "shuntacurosu-plugins",
+    "version": "0.1.0",
+    "plugins": [
+        {
+            "name": "conductor",
+            "source": "./plugins/conductor",
+            "description": "conductor",
+            "version": "0.1.0",
+            "author": {
+                "name": "shuntacurosu"
+            }
+        }
+    ]
+}
