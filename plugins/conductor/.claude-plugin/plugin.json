@@ -1,7 +1,7 @@
 {
     "name": "conductor",
     "description": "Context-Driven Development — Measure twice, code once. Turns Claude Code into a proactive project manager that follows a strict protocol to specify, plan, and implement software features and bug fixes.",
-    "version": "0.1.0",
+    "version": "0.3.1",
     "author": {
         "name": "shuntacurosu"
     }
