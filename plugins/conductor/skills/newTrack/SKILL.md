@@ -32,14 +32,16 @@ CRITICAL: You must validate the success of every tool call. If any tool call fai
 
 1.  **Load Project Context:** Read and understand the content of the project documents (**Product Definition**, **Tech Stack**, etc.) resolved via the **Universal File Resolution Protocol**.
 2.  **Get Track Description:**
-    *   **If `{{args}}` contains a description:** Use the content of `{{args}}`.
-    *   **If `{{args}}` is empty:** Ask the user using the `AskUserQuestionTool` (do not repeat the question in the chat):
-        - **questions:**
-            - **header:** "Description"
-            - **type:** "text"
-            - **question:** "Please provide a brief description of the track (feature, bug fix, chore, etc.) you wish to start."
-            - **placeholder:** "e.g., Implement user authentication"
-        Await the user's response and use it as the track description.
+    *   **If `{{args}}` is empty:**
+        1. Ask the user using the `AskUserQuestionTool` (do not repeat the question in the chat):
+            - **questions:**
+                - **header:** "Description"
+                - **type:** "text"
+                - **question:** "Please provide a brief description of the track (feature, bug fix, chore, etc.) you wish to start."
+                - **placeholder:** "e.g., Implement user authentication"
+            Await the user's response and use it as the track description.
+    *   **If `{{args}}` contains a description:**
+        1. Use the content of `{{args}}` as the track description.
 3.  **Infer Track Type:** Analyze the description to determine if it is a "Feature" or "Something Else" (e.g., Bug, Chore, Refactor). Do NOT ask the user to classify it.
 
 ### 2.2 Interactive Specification Generation (`spec.md`)
