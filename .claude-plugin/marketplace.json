@@ -5,24 +5,5 @@
     },
     "description": "shuntacurosu-plugins",
     "version": "0.1.0",
-    "plugins": [
-        {
-            "name": "conductor",
-            "source": "./plugins/conductor",
-            "description": "conductor",
-            "version": "0.1.0",
-            "author": {
-                "name": "shuntacurosu"
-            }
-        },
-        {
-            "name": "firebase2pocketbase",
-            "source": "./plugins/firebase2pocketbase",
-            "description": "Convert Gemini Canvas React+Firebase JSX files to executable React+PocketBase projects.",
-            "version": "1.0.0",
-            "author": {
-                "name": "shuntacurosu"
-            }
-        }
-    ]
+    "plugins": []
 }
