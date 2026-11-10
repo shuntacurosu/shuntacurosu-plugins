@@ -1,0 +1,16 @@
+{
+  "name": "rc-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cross-host relay hub for Claude Code sessions + xterm/tmux web console (verification environment)",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
+    "node-pty": "^1.0.0",
+    "ws": "^8.18.0"
+  }
+}

@@ -1,0 +1,48 @@
+name: Validate plugins
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Validate marketplace
+        shell: bash
+        run: |
+          # An empty marketplace always warns "no plugins defined", so --strict
+          # is enforced only once at least one plugin is listed.
+          if [ "$(jq '.plugins | length' .claude-plugin/marketplace.json)" -gt 0 ]; then
+            claude plugin validate . --strict
+          else
+            claude plugin validate .
+          fi
+
+      - name: Validate each plugin
+        shell: bash
+        run: |
+          shopt -s nullglob
+          status=0
+          for manifest in plugins/*/.claude-plugin/plugin.json; do
+            dir="${manifest%/.claude-plugin/plugin.json}"
+            echo "::group::$dir"
+            # A CLAUDE.md at the plugin root holds development notes. The
+            # validator warns that it is not shipped as plugin context, which
+            # is intended, so validate a copy without it and keep --strict
+            # for everything else.
+            copy="${RUNNER_TEMP:-/tmp}/validate-plugins/$(basename "$dir")"
+            rm -rf "$copy" && mkdir -p "$copy" && cp -a "$dir/." "$copy/" && rm -f "$copy/CLAUDE.md"
+            claude plugin validate "$copy" --strict || status=1
+            echo "::endgroup::"
+          done
+          exit "$status"

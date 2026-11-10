@@ -6,5 +6,4 @@ Claude Code のプラグインマーケットプレイスです。
 
 | プラグイン | 説明 | バージョン |
 | :--- | :--- | :--- |
-| [Conductor](plugins/conductor/) | コンテキスト駆動開発を実現するプロジェクト管理プラグイン。仕様策定 → 計画 → 実装の一貫したワークフローを提供します。 | `0.1.0` |
-| [Firebase2PocketBase](plugins/firebase2pocketbase/) | Gemini Canvas React+Firebase JSXファイルを、実行可能なReact+PocketBaseプロジェクトに変換します。 | `1.0.0` |
+| [hub](plugins/hub/) | 別ホストで動いている自分の Claude Code セッション同士で、中継サーバ経由でメッセージを送り合えるようにします (`/hub:rc on`、`/hub:list-agents`、`@@宛先 本文`)。 | `0.1.0` |
