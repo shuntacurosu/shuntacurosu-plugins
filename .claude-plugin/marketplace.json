@@ -5,5 +5,15 @@
     },
     "description": "shuntacurosu-plugins",
     "version": "0.1.0",
-    "plugins": []
+    "plugins": [
+        {
+            "name": "hub",
+            "source": "./plugins/hub",
+            "description": "Cross-host messaging between your Claude Code sessions through a relay hub: /hub:rc on, /hub:list-agents, and @@session message.",
+            "version": "0.1.0",
+            "author": {
+                "name": "shuntacurosu"
+            }
+        }
+    ]
 }
