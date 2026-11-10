@@ -1,0 +1,10 @@
+{
+  "name": "hub",
+  "version": "0.1.0",
+  "description": "Cross-host messaging between your Claude Code sessions through a relay hub: /hub:rc on, /hub:list-agents, and @@session message.",
+  "author": {
+    "name": "shuntacurosu"
+  },
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}

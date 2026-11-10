@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remote Control Console</title>
+<link rel="stylesheet" href="/vendor/xterm.css">
+<style>
+  :root {
+    --bg: #14161a; --panel: #1b1e24; --line: #2b3038; --text: #d7dbe2; --dim: #8a93a3;
+    --accent: #6fb1ff; --on: #4fd08a; --busy: #f0b451; --term: #0d0f12;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 14px/1.4 system-ui, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+    display: grid; grid-template-columns: 280px 1fr; min-width: 0;
+  }
+  aside { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  aside h1 { font-size: 13px; font-weight: 600; letter-spacing: .04em; color: var(--dim); margin: 0; padding: 14px 16px 10px; text-transform: uppercase; }
+  #sessions { list-style: none; margin: 0; padding: 0 8px; overflow-y: auto; flex: 1; }
+  #sessions li { margin: 2px 0; }
+  #sessions button {
+    width: 100%; text-align: left; background: none; border: 1px solid transparent; border-radius: 6px;
+    color: inherit; font: inherit; padding: 8px 10px; cursor: pointer; display: grid; gap: 2px;
+  }
+  #sessions button:hover { background: #232730; }
+  #sessions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  #sessions button[aria-current="true"] { background: #262c38; border-color: #3a4558; }
+  .name { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 13px; overflow-wrap: anywhere; }
+  .name .host { color: var(--dim); }
+  .meta { font-size: 12px; color: var(--dim); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #555c69; }
+  .badge.on .dot { background: var(--on); }
+  .badge.on { color: var(--on); }
+  .badge.busy .dot { background: var(--busy); }
+  .badge.busy { color: var(--busy); }
+  aside footer { padding: 10px 16px; font-size: 12px; color: var(--dim); border-top: 1px solid var(--line); }
+  main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  header { padding: 9px 14px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--dim); display: flex; gap: 12px; align-items: baseline; }
+  header strong { color: var(--text); font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-weight: 500; }
+  #terminal { flex: 1; min-height: 0; background: var(--term); padding: 6px 0 0 8px; }
+  #empty { margin: auto; color: var(--dim); }
+  @media (max-width: 700px) {
+    body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    aside { border-right: 0; border-bottom: 1px solid var(--line); max-height: 34vh; }
+  }
+</style>
+</head>
+<body>
+<aside>
+  <h1>Sessions</h1>
+  <ul id="sessions"></ul>
+  <footer id="foot">読み込み中…</footer>
+</aside>
+<main>
+  <header><strong id="title">—</strong><span id="state">左の一覧からセッションを選んでください</span></header>
+  <div id="terminal"></div>
+</main>
+
+<script src="/vendor/xterm.js"></script>
+<script src="/vendor/addon-fit.js"></script>
+<script>
+const list = document.getElementById('sessions')
+const foot = document.getElementById('foot')
+const title = document.getElementById('title')
+const state = document.getElementById('state')
+
+const term = new Terminal({
+  fontFamily: '"Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace',
+  fontSize: 13, cursorBlink: true, scrollback: 5000,
+  theme: { background: '#0d0f12', foreground: '#d7dbe2' },
+})
+const fit = new FitAddon.FitAddon()
+term.loadAddon(fit)
+term.open(document.getElementById('terminal'))
+
+let current = null   // 選択中のコンテナ名
+let socket = null
+
+function send(message) {
+  if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message))
+}
+term.onData(data => send({ type: 'input', data }))
+term.onResize(({ cols, rows }) => send({ type: 'resize', cols, rows }))
+new ResizeObserver(() => { try { fit.fit() } catch {} }).observe(document.getElementById('terminal'))
+
+function connect(container, host) {
+  if (socket) { socket.onclose = null; socket.close() }
+  current = container
+  title.textContent = `${container}@${host}`
+  state.textContent = '接続中…'
+  term.reset()
+  const scheme = location.protocol === 'https:' ? 'wss' : 'ws'
+  const ws = new WebSocket(`${scheme}://${location.host}/term?c=${encodeURIComponent(container)}`)
+  socket = ws
+  ws.onopen = () => { state.textContent = 'tmux: main'; fit.fit(); send({ type: 'resize', cols: term.cols, rows: term.rows }); term.focus() }
+  ws.onmessage = event => term.write(event.data)
+  ws.onclose = () => { if (socket === ws) state.textContent = '切断されました (一覧から選び直すと再接続)' }
+  try { localStorage.setItem('rc.current', container) } catch {}
+  render(lastSessions)
+}
+
+let lastSessions = []
+function render(sessions) {
+  lastSessions = sessions
+  list.replaceChildren(...sessions.map(session => {
+    const li = document.createElement('li')
+    const button = document.createElement('button')
+    button.type = 'button'
+    if (session.container === current) button.setAttribute('aria-current', 'true')
+    const name = document.createElement('span')
+    name.className = 'name'
+    name.append(session.container)
+    const host = document.createElement('span')
+    host.className = 'host'
+    host.textContent = `@${session.host}`
+    name.append(host)
+    const meta = document.createElement('span')
+    meta.className = 'meta'
+    const badge = document.createElement('span')
+    const isOn = session.agents.length > 0
+    const isBusy = session.agents.some(agent => agent.isBusy)
+    badge.className = `badge ${isOn ? (isBusy ? 'busy' : 'on') : ''}`
+    const dot = document.createElement('span')
+    dot.className = 'dot'
+    badge.append(dot, isOn ? (isBusy ? 'rc on · busy' : 'rc on · idle') : 'rc off')
+    meta.append(badge)
+    button.append(name, meta)
+    button.addEventListener('click', () => connect(session.container, session.host))
+    li.append(button)
+    return li
+  }))
+  foot.textContent = sessions.length ? `${sessions.length} セッション` : 'セッションがありません'
+}
+
+async function refresh() {
+  try {
+    const response = await fetch('/api/sessions')
+    const { sessions } = await response.json()
+    render(sessions)
+    if (current === null && sessions.length) {
+      let wanted = null
+      try { wanted = localStorage.getItem('rc.current') } catch {}
+      const pick = sessions.find(session => session.container === wanted) ?? sessions[0]
+      connect(pick.container, pick.host)
+    }
+  } catch {
+    foot.textContent = 'サーバに接続できません'
+  }
+}
+refresh()
+setInterval(refresh, 2500)
+</script>
+</body>
+</html>
