@@ -36,7 +36,13 @@ jobs:
           for manifest in plugins/*/.claude-plugin/plugin.json; do
             dir="${manifest%/.claude-plugin/plugin.json}"
             echo "::group::$dir"
-            claude plugin validate "$dir" --strict || status=1
+            # A CLAUDE.md at the plugin root holds development notes. The
+            # validator warns that it is not shipped as plugin context, which
+            # is intended, so validate a copy without it and keep --strict
+            # for everything else.
+            copy="${RUNNER_TEMP:-/tmp}/validate-plugins/$(basename "$dir")"
+            rm -rf "$copy" && mkdir -p "$copy" && cp -a "$dir/." "$copy/" && rm -f "$copy/CLAUDE.md"
+            claude plugin validate "$copy" --strict || status=1
             echo "::endgroup::"
           done
           exit "$status"
