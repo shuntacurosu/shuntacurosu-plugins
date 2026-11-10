@@ -1,0 +1,75 @@
+# 開発用の検証環境: 「別ホスト」を別ネットワークのコンテナで模擬する。
+#   alpha (host-a) と bravo / charlie (host-b) は互いに直接は届かず、server だけが両方に居る。
+#   http://localhost:8080 で左にセッション一覧、右に選んだコンテナの xterm + tmux。
+#
+#   CLAUDE_CODE_OAUTH_TOKEN を環境変数で渡すか、このフォルダの .env (git には入れない) に書いて:
+#     docker compose up -d --build
+name: hub-dev
+
+x-session: &session
+  build: ./session
+  image: hub-dev-session
+  volumes:
+    - ..:/mods/hub:ro # プラグイン本体 (このフォルダの 1 つ上) をそのまま読ませる
+  depends_on: [server]
+  restart: unless-stopped
+  stop_grace_period: 2s
+
+x-session-env: &session-env
+  CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:?set CLAUDE_CODE_OAUTH_TOKEN in the environment or in dev/.env}
+  CLAUDE_MODEL: ${CLAUDE_MODEL:-sonnet}
+  RC_HUB_URL: http://server:8080
+  RC_HUB_TOKEN: dev-token
+
+services:
+  server:
+    build:
+      context: ./console
+      additional_contexts:
+        hubsrc: ../server # 中継ロジックは見本と同じ server/hub.js を使う
+    image: hub-dev-console
+    ports: ["8080:8080"]
+    environment:
+      RC_TOKENS: "dev-token:dev"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # 各コンテナの tmux に attach するため
+    networks: [net-a, net-b]
+    restart: unless-stopped
+    stop_grace_period: 2s
+
+  alpha:
+    <<: *session
+    container_name: alpha
+    hostname: host-a
+    labels: { rc.session: "1", rc.host: host-a }
+    environment:
+      <<: *session-env
+      RC_AGENT_NAME: alpha
+      RC_HOST_NAME: host-a
+    networks: [net-a]
+
+  bravo:
+    <<: *session
+    container_name: bravo
+    hostname: host-b
+    labels: { rc.session: "1", rc.host: host-b }
+    environment:
+      <<: *session-env
+      RC_AGENT_NAME: bravo
+      RC_HOST_NAME: host-b
+    networks: [net-b]
+
+  charlie:
+    <<: *session
+    container_name: charlie
+    hostname: host-b
+    labels: { rc.session: "1", rc.host: host-b }
+    environment:
+      <<: *session-env
+      RC_AGENT_NAME: charlie
+      RC_HOST_NAME: host-b
+    networks: [net-b]
+
+networks:
+  net-a: {}
+  net-b: {}
