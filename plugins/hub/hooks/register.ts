@@ -230,7 +230,8 @@ function resolveTarget(list: Peer[], wanted: string): Peer {
   const byName = others.filter(peer => peer.name.toLowerCase() === key)
   const byPrefix = others.filter(peer => peer.id.toLowerCase().startsWith(key))
   const found = [exact, byName, byPrefix].find(matches => matches.length > 0) ?? []
-  if (found.length === 1 && key !== '') return found[0]
+  const only = found.length === 1 ? found[0] : undefined
+  if (only !== undefined && key !== '') return only
   const names = others.map(peer => peer.id).join(', ') || 'none'
   if (list.some(peer => peer.isSelf && peer.id.toLowerCase() === key)) {
     throw new Error(`"${wanted}" is this session itself. Other candidates: ${names}`)
@@ -422,9 +423,11 @@ export const register: Register = on => {
     if (!isTyped || e.command !== undefined || !e.text.startsWith('@@')) return next(e)
     const match = /^@@(\S+)\s+([\s\S]+)$/.exec(e.text.trim())
     try {
-      if (match === null) throw new Error('write it as "@@<session> <message>"')
-      const body = match[2].trim()
-      const sent = await sendTo($, match[1], body, 'user')
+      const target = match?.[1]
+      const text = match?.[2]
+      if (target === undefined || text === undefined) throw new Error('write it as "@@<session> <message>"')
+      const body = text.trim()
+      const sent = await sendTo($, target, body, 'user')
       await recordSent($, sent, body)
       $.clock.after(50, () => void clearDraft($, e.text).catch(() => undefined))
       return { drop: sentByPerson(sent, body) }
